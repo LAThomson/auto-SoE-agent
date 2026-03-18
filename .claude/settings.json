@@ -1,16 +1,4 @@
 {
-  "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true,
-    "autopilot@alignment-hive": true
-  },
-  "extraKnownMarketplaces": {
-    "alignment-hive": {
-      "source": {
-        "source": "github",
-        "repo": "Crazytieguy/alignment-hive"
-      }
-    }
-  },
   "permissions": {
     "allow": [
       "Bash(ls)",
