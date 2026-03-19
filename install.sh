@@ -116,8 +116,23 @@ if [ -f "$TARGET_DIR/.gitignore" ] && [ ! -f "$TARGET_DIR/.gitignore.pre-scaffol
     echo "  Backed up .gitignore to .gitignore.pre-scaffold"
 fi
 GITIGNORE_ENTRIES=(
+    ""
+    "# Eval Science Scaffold (symlinks managed by auto-SoE-agent/install.sh)"
+    "subagents/"
+    ".claude/docs/analyst_delegation_guide.md"
+    ".claude/docs/analyst_interface_contract.md"
+    ".claude/docs/eval_science_principles.md"
+    ".claude/docs/inspect_reference.md"
+    ".claude/docs/orchestrator_responsibilities.md"
+    ".claude/docs/subagent_invocation.md"
+    ".claude/skills/orchestrator/"
+    ".claude/settings.json"
     ".claude/autopilot/"
-    "subagents/**/memory.md"
+    "CLAUDE.md"
+    "CLAUDE.md.upstream"
+    "CLAUDE.local.md"
+    ".devcontainer/devcontainer.json.pre-scaffold"
+    ".gitignore.pre-scaffold"
 )
 for entry in "${GITIGNORE_ENTRIES[@]}"; do
     if [ -f "$TARGET_DIR/.gitignore" ] && grep -qF "$entry" "$TARGET_DIR/.gitignore"; then
@@ -194,6 +209,20 @@ else
     echo ""
     echo "  No .devcontainer/devcontainer.json found — skipping container setup."
     echo "  If using a devcontainer, manually mount $SCAFFOLD_DIR at $CONTAINER_SCAFFOLD"
+fi
+
+# --- Tell git to ignore local changes to patched upstream files ---
+echo ""
+echo "Marking patched files as assume-unchanged in git..."
+if [ -d "$TARGET_DIR/.git" ]; then
+    git -C "$TARGET_DIR" update-index --assume-unchanged \
+        .devcontainer/devcontainer.json \
+        .gitignore \
+        CLAUDE.md \
+        2>/dev/null || true
+    echo "  Done (git status will stay clean)"
+else
+    echo "  SKIP: target is not a git repo"
 fi
 
 echo ""

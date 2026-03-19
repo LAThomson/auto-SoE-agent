@@ -135,5 +135,17 @@ for dir in \
     fi
 done
 
+# --- Undo assume-unchanged on restored files ---
+echo ""
+echo "Restoring git tracking on patched files..."
+if [ -d "$TARGET_DIR/.git" ]; then
+    git -C "$TARGET_DIR" update-index --no-assume-unchanged \
+        .devcontainer/devcontainer.json \
+        .gitignore \
+        CLAUDE.md \
+        2>/dev/null || true
+    echo "  Done"
+fi
+
 echo ""
 echo "Uninstallation complete."
