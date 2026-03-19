@@ -124,6 +124,16 @@ for entry in "${GITIGNORE_ENTRIES[@]}"; do
     fi
 done
 
+# --- Configure git hooks for the scaffold repo ---
+echo ""
+echo "Configuring git hooks..."
+if [ -d "$SCAFFOLD_DIR/.git" ]; then
+    git -C "$SCAFFOLD_DIR" config core.hooksPath .githooks
+    echo "  Activated .githooks/pre-commit for scaffold repo"
+else
+    echo "  SKIP: scaffold directory is not a git repo"
+fi
+
 # --- Patch devcontainer.json to mount the scaffold repo ---
 DEVCONTAINER="$TARGET_DIR/.devcontainer/devcontainer.json"
 if [ -f "$DEVCONTAINER" ]; then

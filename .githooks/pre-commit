@@ -1,0 +1,4 @@
+#!/bin/bash
+# Ensure scripts remain executable in git, even if the filesystem
+# permission is stripped (e.g., by Claude Code's Write tool).
+git update-index --chmod=+x install.sh uninstall.sh
