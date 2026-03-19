@@ -9,6 +9,7 @@ set -euo pipefail
 
 SCAFFOLD_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_DIR="${1:?Usage: ./uninstall.sh /path/to/target_repo}"
+CONTAINER_SCAFFOLD="/home/inspect/auto-SoE-agent"
 
 if [ ! -d "$TARGET_DIR" ]; then
     echo "Error: $TARGET_DIR is not a directory"
@@ -22,7 +23,7 @@ echo "  Scaffold: $SCAFFOLD_DIR"
 echo "  Target:   $TARGET_DIR"
 echo ""
 
-# --- Helper: remove a symlink only if it points into the scaffold repo ---
+# --- Helper: remove a symlink only if it points into the scaffold ---
 unlink_file() {
     local rel_path="$1"
     local dst="$TARGET_DIR/$rel_path"
@@ -30,7 +31,7 @@ unlink_file() {
     if [ -L "$dst" ]; then
         local link_target
         link_target="$(readlink "$dst")"
-        if echo "$link_target" | grep -q "$SCAFFOLD_DIR"; then
+        if echo "$link_target" | grep -q "$CONTAINER_SCAFFOLD"; then
             rm "$dst"
             echo "  Removed: $rel_path"
         else
@@ -86,6 +87,37 @@ unlink_file "CLAUDE.md"
 if [ -f "$TARGET_DIR/CLAUDE.md.upstream" ]; then
     mv "$TARGET_DIR/CLAUDE.md.upstream" "$TARGET_DIR/CLAUDE.md"
     echo "  Restored: CLAUDE.md (from backup)"
+fi
+
+# --- Remove scaffold mount from devcontainer.json ---
+DEVCONTAINER="$TARGET_DIR/.devcontainer/devcontainer.json"
+if [ -f "$DEVCONTAINER" ]; then
+    echo ""
+    echo "Cleaning devcontainer.json..."
+    python3 -c "
+import json, sys
+
+devcontainer_path = sys.argv[1]
+mount_target = sys.argv[2]
+
+with open(devcontainer_path) as f:
+    config = json.load(f)
+
+mounts = config.get('mounts', [])
+original_len = len(mounts)
+config['mounts'] = [
+    m for m in mounts
+    if not (isinstance(m, dict) and m.get('target') == mount_target)
+]
+
+if len(config['mounts']) < original_len:
+    with open(devcontainer_path, 'w') as f:
+        json.dump(config, f, indent=2)
+        f.write('\n')
+    print('  Removed scaffold mount from devcontainer.json')
+else:
+    print('  No scaffold mount found in devcontainer.json')
+" "$DEVCONTAINER" "$CONTAINER_SCAFFOLD"
 fi
 
 echo ""
