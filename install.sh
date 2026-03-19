@@ -184,26 +184,35 @@ with open(devcontainer_path) as f:
 mounts = config.setdefault('mounts', [])
 
 # Check if mount already exists.
-already_present = any(
+mount_present = any(
     isinstance(m, dict) and m.get('target') == mount_target
     for m in mounts
 )
 
-if already_present:
+if mount_present:
     print('  Already present: scaffold mount in devcontainer.json')
-    sys.exit(0)
+else:
+    mounts.append({
+        'source': mount_source,
+        'target': mount_target,
+        'type': 'bind'
+    })
+    print('  Added scaffold mount to devcontainer.json')
 
-mounts.append({
-    'source': mount_source,
-    'target': mount_target,
-    'type': 'bind'
-})
+# --- Add Claude Code devcontainer feature ---
+CLAUDE_FEATURE = 'ghcr.io/anthropics/devcontainer-features/claude-code:latest'
+features = config.setdefault('features', {})
+ 
+if CLAUDE_FEATURE in features:
+    print('  Already present: Claude Code feature in devcontainer.json')
+else:
+    features[CLAUDE_FEATURE] = {}
+    print('  Added Claude Code feature to devcontainer.json')
 
 with open(devcontainer_path, 'w') as f:
     json.dump(config, f, indent=2)
     f.write('\n')
 
-print('  Added scaffold mount to devcontainer.json')
 " "$DEVCONTAINER" "$MOUNT_SOURCE" "$CONTAINER_SCAFFOLD"
 else
     echo ""
