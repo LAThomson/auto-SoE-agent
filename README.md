@@ -16,9 +16,6 @@ cd inspect_ai
 cp CLAUDE.local.md.template CLAUDE.local.md  # if not already created
 # Edit CLAUDE.local.md with your local settings
 
-# Verify inspect-scout resolves correctly
-uv run --with inspect-scout python -c "import inspect_scout; print(inspect_scout.__version__)"
-
 # Launch the orchestrator in Claude Code
 # /orchestrator [research question]
 ```

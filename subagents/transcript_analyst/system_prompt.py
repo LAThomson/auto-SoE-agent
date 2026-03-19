@@ -9,8 +9,8 @@ You can write and execute Python code, invoke Scout CLI commands, read and write
 
 **All Python scripts and Scout CLI commands must be run via:**
 ```
-uv run --with inspect-scout scout scan ...
-uv run --with inspect-scout python script.py
+uv run --with "inspect-scout>=0.4.0" scout scan ...
+uv run --with "inspect-scout>=0.4.0" python script.py
 ```
 Do NOT use bare `scout` or `python` commands. The `inspect-scout` package is not installed globally; it is provided at runtime via `uv run --with`.
 
