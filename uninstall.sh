@@ -89,37 +89,51 @@ if [ -f "$TARGET_DIR/CLAUDE.md.upstream" ]; then
     echo "  Restored: CLAUDE.md (from backup)"
 fi
 
-# --- Remove scaffold mount from devcontainer.json ---
+# --- Restore devcontainer.json from backup ---
 DEVCONTAINER="$TARGET_DIR/.devcontainer/devcontainer.json"
-if [ -f "$DEVCONTAINER" ]; then
+if [ -f "$DEVCONTAINER.pre-scaffold" ]; then
     echo ""
-    echo "Cleaning devcontainer.json..."
-    python3 -c "
-import json, sys
-
-devcontainer_path = sys.argv[1]
-mount_target = sys.argv[2]
-
-with open(devcontainer_path) as f:
-    config = json.load(f)
-
-mounts = config.get('mounts', [])
-original_len = len(mounts)
-config['mounts'] = [
-    m for m in mounts
-    if not (isinstance(m, dict) and m.get('target') == mount_target)
-]
-
-if len(config['mounts']) < original_len:
-    with open(devcontainer_path, 'w') as f:
-        json.dump(config, f, indent=2)
-        f.write('\n')
-    print('  Removed scaffold mount from devcontainer.json')
-else:
-    print('  No scaffold mount found in devcontainer.json')
-" "$DEVCONTAINER" "$CONTAINER_SCAFFOLD"
+    echo "Restoring devcontainer.json..."
+    mv "$DEVCONTAINER.pre-scaffold" "$DEVCONTAINER"
+    echo "  Restored: devcontainer.json (from backup)"
 fi
+
+# --- Restore .gitignore from backup ---
+if [ -f "$TARGET_DIR/.gitignore.pre-scaffold" ]; then
+    echo ""
+    echo "Restoring .gitignore..."
+    mv "$TARGET_DIR/.gitignore.pre-scaffold" "$TARGET_DIR/.gitignore"
+    echo "  Restored: .gitignore (from backup)"
+fi
+
+# --- Remove CLAUDE.local.md if it matches the template ---
+if [ -f "$TARGET_DIR/CLAUDE.local.md" ]; then
+    echo ""
+    if [ -f "$SCAFFOLD_DIR/CLAUDE.local.md.template" ] && \
+       diff -q "$TARGET_DIR/CLAUDE.local.md" "$SCAFFOLD_DIR/CLAUDE.local.md.template" > /dev/null 2>&1; then
+        rm "$TARGET_DIR/CLAUDE.local.md"
+        echo "  Removed: CLAUDE.local.md (unmodified template)"
+    else
+        echo "  SKIP: CLAUDE.local.md has been modified — leaving in place"
+    fi
+fi
+
+# --- Clean up empty directories left by symlink removal ---
+echo ""
+echo "Cleaning up empty directories..."
+for dir in \
+    "$TARGET_DIR/subagents/environment_explorer" \
+    "$TARGET_DIR/subagents/experiment_executor" \
+    "$TARGET_DIR/subagents/transcript_analyst" \
+    "$TARGET_DIR/subagents" \
+    "$TARGET_DIR/.claude/docs" \
+    "$TARGET_DIR/.claude/skills/orchestrator" \
+    "$TARGET_DIR/.claude/skills"; do
+    if [ -d "$dir" ] && [ -z "$(ls -A "$dir")" ]; then
+        rmdir "$dir"
+        echo "  Removed empty directory: ${dir#$TARGET_DIR/}"
+    fi
+done
 
 echo ""
 echo "Uninstallation complete."
-echo "Note: .gitignore entries and CLAUDE.local.md were left in place."

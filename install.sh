@@ -108,9 +108,13 @@ else
     echo "  SKIP (exists): CLAUDE.local.md"
 fi
 
-# --- Handle .gitignore (append scaffold entries) ---
+# --- Handle .gitignore (backup and append scaffold entries) ---
 echo ""
 echo "Updating .gitignore..."
+if [ -f "$TARGET_DIR/.gitignore" ] && [ ! -f "$TARGET_DIR/.gitignore.pre-scaffold" ]; then
+    cp "$TARGET_DIR/.gitignore" "$TARGET_DIR/.gitignore.pre-scaffold"
+    echo "  Backed up .gitignore to .gitignore.pre-scaffold"
+fi
 GITIGNORE_ENTRIES=(
     ".claude/autopilot/"
     "subagents/**/memory.md"
@@ -140,8 +144,15 @@ if [ -f "$DEVCONTAINER" ]; then
     echo ""
     echo "Patching devcontainer.json..."
 
+    # Backup original devcontainer.json before patching.
+    if [ ! -f "$DEVCONTAINER.pre-scaffold" ]; then
+        cp "$DEVCONTAINER" "$DEVCONTAINER.pre-scaffold"
+        echo "  Backed up devcontainer.json to devcontainer.json.pre-scaffold"
+    fi
+
     # Compute relative path from target repo to scaffold repo.
-    REL_PATH="$(realpath --relative-to="$TARGET_DIR" "$SCAFFOLD_DIR")"
+    # Use python3 for portability (macOS realpath lacks --relative-to).
+    REL_PATH="$(python3 -c "import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$SCAFFOLD_DIR" "$TARGET_DIR")"
     MOUNT_SOURCE="\${localWorkspaceFolder}/$REL_PATH"
 
     # Use python3 to safely add the mount entry if not already present.
