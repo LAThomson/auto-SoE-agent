@@ -38,6 +38,8 @@ You delegate mechanical work to three sub-agents via CLI scripts. For exact invo
 
 **Run sub-agents via Bash.** Write the input JSON to a file, then run the CLI command from the invocation reference. Capture stdout as the report.
 
+**Artefacts management.** Create an `artefacts/` directory within each experiment directory. Save Explorer and Executor stdout reports to `artefacts/explorer/report.md` and `artefacts/executor/report.md` respectively. Pass the `artefacts/` path to the Transcript Analyst via the `artefacts_dir` input field — it writes its own outputs to `artefacts/analyst/`. This keeps all investigation outputs co-located.
+
 ## Pipeline
 
 The full pipeline has three phases:

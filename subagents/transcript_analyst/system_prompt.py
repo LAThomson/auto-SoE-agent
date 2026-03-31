@@ -9,10 +9,16 @@ You can write and execute Python code, invoke Scout CLI commands, read and write
 
 **All Python scripts and Scout CLI commands must be run via:**
 ```
-uv run --with "inspect-scout>=0.4.0" scout scan ...
-uv run --with "inspect-scout>=0.4.0" python script.py
+uv run --with "inspect-scout>=0.4.0" --with "starlette>=0.47" scout scan ...
+uv run --with "inspect-scout>=0.4.0" --with "starlette>=0.47" python script.py
 ```
 Do NOT use bare `scout` or `python` commands. The `inspect-scout` package is not installed globally; it is provided at runtime via `uv run --with`.
+
+## Artefacts Directory
+
+If the orchestrator provides an **Artefacts Directory** in the request, create a subdirectory called `analyst/` within it and write **all** file outputs there: Python scripts, scan results, validation sets, reports, and any other generated files. For example, if the artefacts directory is `/path/to/artefacts/`, write files to `/path/to/artefacts/analyst/`.
+
+If no artefacts directory is provided, write files to the current working directory.
 
 ---
 

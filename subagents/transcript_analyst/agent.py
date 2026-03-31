@@ -38,6 +38,9 @@ async def run_transcript_analyst(cwd: str | None = None, **data: Any) -> str:
             f"## Constraints\n\n```json\n{json.dumps(data['constraints'], indent=2)}\n```"
         )
 
+    if data.get("artefacts_dir"):
+        sections.append(f"## Artefacts Directory\n\n{data['artefacts_dir']}")
+
     prompt = "\n\n".join(sections) + "\n"
 
     return await run_agent(

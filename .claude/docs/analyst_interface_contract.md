@@ -46,6 +46,10 @@ Enforceable: maximum number of transcripts to scan (maps to `--limit`), maximum 
 
 Best-effort: budget limits on API calls, specific scanner types to use or avoid, or preferences about scanning granularity. The analyst should respect these but there is no mechanism that enforces them at the tooling level.
 
+### Artefacts directory (optional)
+
+A path to a shared artefacts directory for the investigation. When provided, the analyst creates an `analyst/` subdirectory within it and writes all file outputs there (scripts, scan results, validation sets, reports). This keeps all investigation artefacts co-located. If not provided, the analyst writes to the current working directory.
+
 ---
 
 ## Analyst → Orchestrator: Report Format

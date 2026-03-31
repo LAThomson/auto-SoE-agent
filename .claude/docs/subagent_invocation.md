@@ -78,13 +78,15 @@ The orchestrator should: (1) write the input JSON to a temp file, (2) run the co
         "condition_B": "/absolute/path/to/logs/run_002"
     },
     "scanning_model": "openai/gpt-4.1-mini",
-    "constraints": {"limit": 100}
+    "constraints": {"limit": 100},
+    "artefacts_dir": "/absolute/path/to/investigation/artefacts"
 }
 ```
 
 - `transcript_source` values must all be existing directories containing `.eval` log files
 - `topic` must be a **neutral description** — never the hypothesis
 - Use **opaque condition labels** (condition_A, condition_B) — randomise the mapping to conditions
-- `scanning_model` and `constraints` are optional
+- `scanning_model`, `constraints`, and `artefacts_dir` are optional
+- When `artefacts_dir` is provided, the analyst writes all file outputs to `<artefacts_dir>/analyst/`
 
 **Returns**: Scanner definitions, validation metrics, quantified results (per-condition detection rates), scan results path, transcript exclusions, transcript excerpts, additional observations. See `analyst_interface_contract.md` for the full report format.

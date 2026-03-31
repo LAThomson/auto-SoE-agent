@@ -86,6 +86,7 @@ The user presents a research question. The orchestrator helps refine it into a t
 **Orchestrator work:**
 - Construct the Explorer input JSON and launch via CLI script (see `subagent_invocation.md`).
 - The hypothesis IS passed to the Explorer — this is the one agent that receives it directly. (The Transcript Analyst must NOT receive it.)
+- Save the Explorer's stdout report to `<experiment_dir>/artefacts/explorer/report.md`.
 
 **What can go wrong:**
 - The Explorer reports that the hypothesis is untestable with the given environment (e.g., the eval doesn't have the right structure). Report to user and revise.
@@ -141,6 +142,12 @@ This is entirely the orchestrator's work. No sub-agent handles this.
 
    If iterating on a previous experiment, create a new directory (e.g., `explicit_goal_framing_v2`) rather than modifying the previous one. Previous experiment directories are evidence and should not be altered.
 
+   **Create an artefacts directory** within the experiment directory:
+   ```
+   <parent>/<experiment_name>/artefacts/
+   ```
+   This directory is passed to sub-agents that produce file outputs. Each sub-agent creates its own subdirectory (e.g., `artefacts/analyst/`). The orchestrator saves stdout reports from sub-agents that cannot write files themselves (the Environment Explorer) to `artefacts/explorer/report.md`.
+
 2. **Apply the Explorer's diffs.** For each modification site in each condition:
    - If using **parameter-based conditions** (Pattern A): apply any shared modifications that are common to all conditions, then rely on different `-T` values to activate each condition at runtime. This may involve creating condition-specific copies of files referenced by the parameter (e.g., `system_prompt_control.txt`, `system_prompt_treatment.txt`).
    - If using **separate task files** (Pattern B): create a copy of the task file for each condition, applying the relevant diffs to each copy. Name them with the condition name (e.g., `task_control.py`, `task_treatment.py`).
@@ -174,6 +181,8 @@ This is entirely the orchestrator's work. No sub-agent handles this.
    - `overrides` (optional): `sample_limit`, `epochs`, `skip_preflight`, `max_connections`, `runs_per_condition`
 
 3. **Launch the Experiment Executor sub-agent** via CLI script (see `subagent_invocation.md`).
+
+4. **Save the Executor's stdout report** to `<experiment_dir>/artefacts/executor/report.md`.
 
 **Example input JSON:**
 ```json
@@ -259,6 +268,7 @@ This is the orchestrator's most important cognitive task. The Transcript Analyst
    - **Transcript source**: A mapping from opaque condition labels to log directory paths (e.g., `{"condition_A": "<experiment_dir>/logs/control/", "condition_B": "<experiment_dir>/logs/treatment/"}`). Randomise the mapping between condition labels and actual conditions.
    - **Scanning model** (optional): Override the default scanning model if needed.
    - **Constraints** (optional): Limit transcript count, concurrency, etc.
+   - **Artefacts directory**: Pass `<experiment_dir>/artefacts/` so the analyst writes its outputs to `<experiment_dir>/artefacts/analyst/`.
 
 2. **Launch the Transcript Analyst sub-agent** via CLI script (see `subagent_invocation.md`).
 
@@ -426,14 +436,25 @@ The orchestrator maintains `investigation-log.md` in the experiment's parent dir
 ├── <eval_environment>/           # Original eval (never modified)
 ├── <experiment_name>_v1/         # Iteration 1 working copy
 │   ├── [eval files, modified]
-│   └── logs/
-│       ├── control/
-│       └── treatment/
+│   ├── logs/
+│   │   ├── control/
+│   │   └── treatment/
+│   └── artefacts/
+│       ├── explorer/             # Explorer report (saved by orchestrator)
+│       │   └── report.md
+│       ├── executor/             # Executor report (saved by orchestrator)
+│       │   └── report.md
+│       └── analyst/              # Analyst outputs (written by analyst agent)
+│           ├── report.md
+│           ├── scanners.py
+│           └── scans/
 ├── <experiment_name>_v2/         # Iteration 2 working copy (if needed)
 │   ├── [eval files, modified differently]
-│   └── logs/
-│       ├── control/
-│       └── treatment/
+│   ├── logs/
+│   │   ├── control/
+│   │   └── treatment/
+│   └── artefacts/
+│       └── [same structure]
 └── investigation-log.md          # Persistent state
 ```
 
