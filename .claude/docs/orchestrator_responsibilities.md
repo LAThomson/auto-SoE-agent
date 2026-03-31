@@ -358,21 +358,26 @@ Before interpreting findings, run lightweight consistency checks. See `analyst_d
 
 ## Phase 3: Report to User
 
+**Report structure:** Lead with the headline, then provide supporting evidence. The user should be able to stop reading after the first paragraph and understand the core finding.
+
 **Orchestrator work:**
 
-1. **Synthesize across iterations.** If multiple iterations occurred, present the arc: what was hypothesized, what was tried, what was found, and how understanding evolved.
+1. **Headline finding (1-2 sentences).** What was the research question, and what did you find? State the effect direction and magnitude. If the result is null, say so directly.
 
-2. **Present findings in context.** Connect the Analyst's observations back to the hypothesis. Use the Analyst's language (descriptive, not causal) and cite the same agent run IDs.
+2. **Evidence summary (brief).** Per-iteration: what was manipulated, what changed, key numbers. Use a table if there were multiple iterations. Do not relay the full analyst report — summarise the 2-3 strongest signals with their per-condition rates and validation metrics.
 
-3. **Distinguish evidence strength.** Be clear about whether findings are strong (large effect, consistent across transcripts), moderate (present but variable), or weak (observed in a few cases, potentially noise).
+3. **Caveats and limitations.** What could undermine these findings? Include: sample size adequacy, baseline variance across iterations, scanner precision/recall, differential attrition, confounds not controlled for. Be specific — "more work is needed" is not a caveat.
 
-4. **Provide the scan results path.** The user can drill into specific transcripts using the raw scan results.
+4. **Artefacts.** Point the user to the investigation log, experiment directories, and analyst scan results for drill-down.
 
-5. **Acknowledge limitations.** Surface the Analyst's limitations section and any caveats from the Executor (retry flags, asymmetric failures).
+5. **Suggested next steps** (if appropriate). 2-3 concrete options ranked by information value, not a laundry list.
 
-6. **Check for narrative coherence** (see `eval_science_principles.md`). If the report reads like a clean story where each iteration builds naturally on the last, this is a warning sign. Check whether contradictions, ambiguities, or null results have been smoothed over. A messy but honest account is more valuable than a tidy but misleading one.
+**Self-checks before presenting:**
 
-7. **Suggest next steps** (if appropriate). This might include: running with more samples, testing on different models, exploring a related hypothesis, or refining the eval environment.
+- **Check for narrative coherence** (see `eval_science_principles.md`). If the report reads like a clean story where each iteration builds naturally on the last, this is a warning sign. Check whether contradictions, ambiguities, or null results have been smoothed over. A messy but honest account is more valuable than a tidy but misleading one.
+- **Distinguish evidence strength.** Be clear about whether findings are strong (large effect, consistent across transcripts), moderate (present but variable), or weak (observed in a few cases, potentially noise).
+- **Use mechanistic language.** Describe what happened, not what the model "thought" or "wanted."
+- **Do not synthesise across iterations prematurely.** Each iteration tests a single IV. Report each finding on its own terms. Do not combine results from separate iterations into a joint causal claim (e.g., "A and B are both necessary conditions") unless the interaction has actually been tested in a factorial design. You may note that a combined explanation is *suggested* by the pattern, but label it explicitly as an untested hypothesis rather than a conclusion. Premature synthesis is a form of narrative coherence that overstates the evidence.
 
 ---
 

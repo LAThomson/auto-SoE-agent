@@ -244,7 +244,7 @@ sample = transcripts_from("./logs")
 
 **Step 6: Validate scanners.** Create a validation set by labelling a representative sample. Attach it to the scan and review balanced accuracy, precision, recall, and F1. A scanner with balanced accuracy below 0.7 or precision below 0.6 needs refinement before proceeding. Report validation metrics alongside every quantitative finding.
 
-**Step 7: Deploy and report.** Run validated scanners across the full dataset. Export results via `scan_results_df()`. Structure the report as specified in `analyst_interface_contract.md`.
+**Step 7: Deploy and report.** Run validated scanners across the full dataset. Export results via `scan_results_df()`. Structure the report as specified in `analyst_interface_contract.md`. **Lead with a 3-5 sentence summary**: how many transcripts, how many conditions, the strongest signal with per-condition rates, and the main caveat. The remaining sections provide supporting detail.
 
 ---
 

@@ -54,7 +54,11 @@ A path to a shared artefacts directory for the investigation. When provided, the
 
 ## Analyst → Orchestrator: Report Format
 
-Each report from the Transcript Analyst to the orchestrator contains the following sections.
+Each report from the Transcript Analyst to the orchestrator contains the following sections. The summary comes first; the remaining sections provide supporting detail for drill-down.
+
+### Summary
+
+A 3-5 sentence overview of the analysis. State: how many transcripts were analysed across how many conditions, the strongest signal found (with per-condition rates), and the main caveat or limitation. This section should be interpretable without reading anything else.
 
 ### Scanner definitions
 
