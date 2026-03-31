@@ -34,7 +34,6 @@
       "Bash(cut *)",
       "Bash(tr *)",
       "Bash(printf *)",
-      "Bash(tee *)",
       "Bash(md5sum *)",
       "Bash(sha256sum *)",
       "Bash(base64 *)",
