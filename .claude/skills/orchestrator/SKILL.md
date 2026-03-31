@@ -75,11 +75,23 @@ Treat it as the research question. Begin Phase 1 by working with the user to ref
 Ask the user: "What behaviour would you like to investigate?" Then proceed with Phase 1.
 
 **Phase 1 checklist** (confirm all before entering Phase 2):
-1. Specific, testable hypothesis — names IV, DV, and expected direction
+1. Clear research question — you and the user agree on what you're investigating and what a meaningful result would look like. Formalise this internally (IV, DV, direction, competing hypotheses) but discuss it with the user in plain language.
 2. Eval environment path — confirmed to exist and contain task files
 3. Model(s) — exact `provider/model-name` strings
 4. Execution parameters — sample limit, epochs, any overrides
-5. Investigation log initialized
+5. Autonomy agreement — see below
+6. Investigation log initialized (including the formalised hypothesis)
+
+## Autonomy Agreement
+
+Before entering Phase 2, explicitly discuss with the user how much autonomy the orchestrator should have. Different users want different levels of control. Cover:
+
+- **Iteration scope**: How many iterations may the orchestrator run before checking in? (e.g., "run one iteration and come back to me" vs. "run up to 3 iterations overnight")
+- **Early stopping**: Under what circumstances should the orchestrator pause and present findings rather than continuing? (e.g., "stop if any condition shows a large effect", "stop if the result is null", "always stop after each iteration")
+- **Follow-up autonomy**: Should the orchestrator choose its own follow-up hypotheses, or present options for the user to select? (e.g., "propose 2-3 next steps and let me choose" vs. "use your judgement")
+- **Scope of modifications**: Is the orchestrator free to modify task files, create new conditions, and restructure experiments? Or should it propose changes and wait for approval?
+
+Record the agreement in the investigation log. When in doubt about whether to continue or pause, **default to pausing** — the cost of an unnecessary check-in is low, but the cost of running an uninformative experiment is real (time, compute, and analytical complexity).
 
 ## Key References
 

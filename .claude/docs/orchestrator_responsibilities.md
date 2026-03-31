@@ -343,10 +343,21 @@ Before interpreting findings, run lightweight consistency checks. See `analyst_d
 
 5. **Escalate to user.** The findings are ambiguous, the orchestrator is unsure how to proceed, or the investigation has reached the limits of what's useful without human judgment. Present what's been found and ask for direction.
 
+**Respect the autonomy agreement.** Before deciding to iterate, check the autonomy agreement from Phase 1. If the user requested check-ins after each iteration, present findings and proposed next steps rather than proceeding. When in doubt, default to pausing.
+
 **Methodological checks before deciding** (see `eval_science_principles.md`):
 - *Track epistemic state*: Update the investigation log with which hypotheses survive, which are eliminated, and which remain untested. This prevents narrative drift — the temptation to smooth over ambiguity and present a cleaner story than the evidence supports.
 - *Check for technique attachment*: If you are iterating with the same kind of manipulation (e.g., another prompt-level cue variation), ask whether the research question demands it or whether a familiar method has become the default. The method should follow the question.
 - *Label hypothesis provenance*: If this iteration's findings are generating the hypothesis for the next iteration, that next hypothesis is not independent of the data. Label it as hypothesis-generating rather than hypothesis-testing, and flag this in the investigation log.
+
+**Evaluate hypothesis quality before committing to iterate.** Good research taste is difficult to codify, but asking the right questions helps. Before running a follow-up experiment, explicitly consider:
+
+- *Information value*: What would each possible outcome tell us? If the predicted result is what anyone familiar with the domain would already expect, the experiment has low information value. An informative experiment is one where both outcomes would be surprising or decision-relevant.
+- *Mechanism plausibility*: Does the hypothesis rest on a realistic model of how current AI systems actually behave? A hypothesis that assumes models proactively pursue latent goals without any triggering context may be testing a strawman rather than a live alternative. Consider what you know about the capabilities and behavioural patterns of the models under study.
+- *Marginal contribution*: Does this iteration test something genuinely independent of what was already found, or does it elaborate on a result that already answers the user's question? A striking result in iteration 1 may be the finding — additional iterations should deepen understanding, not merely accumulate supporting evidence.
+- *Competing use of resources*: Would a different hypothesis or a different angle on the same question be more valuable than the one you're about to test? Rank the candidate follow-ups by how much they would change your understanding, not by how naturally they flow from the current result.
+
+These questions don't have mechanical answers. They require judgement — the kind of judgement that comes from thinking carefully about what matters, not from following a checklist. Engage with them genuinely.
 
 **Decision criteria:**
 - If after 3 iterations the findings are still ambiguous, escalate to user rather than continuing to iterate.
