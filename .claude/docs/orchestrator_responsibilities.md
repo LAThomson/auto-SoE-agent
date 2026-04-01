@@ -62,6 +62,7 @@ The user presents a research question. The orchestrator helps refine it into a t
    - Sample limit (full dataset or a subset for rapid iteration?)
    - Number of epochs per sample
    - Whether to skip preflight validation
+   - Parallelism preferences (`max_parallel` — how many eval runs to execute concurrently; if unset, the Executor decides based on environment assessment)
    - Any other Inspect CLI overrides
 
 5. **Initialize the investigation log.** Create `investigation-log.md` in the experiment's parent directory to track state across iterations (see State Management below).

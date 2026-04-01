@@ -68,6 +68,9 @@ link_file "subagents/experiment_executor/main.py"
 link_file "subagents/experiment_executor/memory.md"
 link_file "subagents/experiment_executor/system_prompt.py"
 
+# scripts
+link_file "scripts/execute_evals.py"
+
 link_file "subagents/transcript_analyst/__init__.py"
 link_file "subagents/transcript_analyst/agent.py"
 link_file "subagents/transcript_analyst/main.py"

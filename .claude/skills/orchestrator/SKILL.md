@@ -90,6 +90,7 @@ Before entering Phase 2, explicitly discuss with the user how much autonomy the 
 - **Early stopping**: Under what circumstances should the orchestrator pause and present findings rather than continuing? (e.g., "stop if any condition shows a large effect", "stop if the result is null", "always stop after each iteration")
 - **Follow-up autonomy**: Should the orchestrator choose its own follow-up hypotheses, or present options for the user to select? (e.g., "propose 2-3 next steps and let me choose" vs. "use your judgement")
 - **Scope of modifications**: Is the orchestrator free to modify task files, create new conditions, and restructure experiments? Or should it propose changes and wait for approval?
+- **Parallelism**: Does the user have resource constraints or preferences on concurrent eval execution? If so, pass `max_parallel` to the Executor. If not, the Executor assesses the environment and decides autonomously.
 
 Record the agreement in the investigation log. When in doubt about whether to continue or pause, **default to pausing** — the cost of an unnecessary check-in is low, but the cost of running an uninformative experiment is real (time, compute, and analytical complexity).
 

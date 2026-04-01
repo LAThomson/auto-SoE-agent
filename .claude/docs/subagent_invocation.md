@@ -61,9 +61,9 @@ The orchestrator should: (1) write the input JSON to a temp file, (2) run the co
 ```
 
 - `experiment_dir` must be an existing directory
-- `overrides` is optional
+- `overrides` is optional; may include `max_parallel` to cap concurrent eval processes
 
-**Returns**: Log paths, status per condition-model pair, error summary, retry flags, execution summary.
+**Returns**: Log paths, status per condition-model pair, concurrency summary, error summary, retry flags, execution summary.
 
 ## Transcript Analyst
 
