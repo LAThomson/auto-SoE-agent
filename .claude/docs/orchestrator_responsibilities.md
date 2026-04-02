@@ -229,6 +229,8 @@ This is entirely the orchestrator's work. No sub-agent handles this.
 
 5. **Record in investigation log.** Update the investigation log with execution results.
 
+**Do not read eval results.** Between receiving the Executor's report and receiving the Analyst's report, do not read eval log file contents, extract scores, compute aggregate metrics, or run `inspect log list/dump` on experiment log directories. The Executor's report already contains everything needed to decide whether to proceed (status, sample counts, errors). You may verify that log *files exist* (e.g., `ls` the log directory to confirm paths before passing them to the Analyst), but you must not read their *contents*. The Analyst's blinded report must be your first view of the experimental results. Reading scores early contaminates your interpretation of the Analyst's findings — you will unconsciously seek confirmation of what you already know.
+
 **What can go wrong:**
 - The Executor's report is ambiguous about whether a failure is structural or transient. Read the error details carefully.
 - The log paths in the report don't exist (Executor bug). Verify log paths exist before passing them to the Analyst.
@@ -521,3 +523,5 @@ If Model A succeeded but Model B failed entirely, the orchestrator can still sen
 7. **Running too many iterations without user check-in.** Autonomous investigation is valuable, but after 2-3 iterations, the user should be consulted. The orchestrator might be pursuing a dead end.
 
 8. **Applying diffs without verifying them.** Always read modified files back after applying changes. A misapplied diff can silently confound the experiment.
+
+9. **Reading eval results before the Analyst reports.** The orchestrator must not read log file contents, extract scores, or compute metrics between the Executor completing and the Analyst reporting. The Executor's report provides sufficient information (status, sample counts, errors) to decide whether to proceed. Reading scores early primes the orchestrator to seek confirmation rather than genuinely interpreting the Analyst's blinded findings.
