@@ -1,9 +1,0 @@
-## Running Commands
-
-Run scripts via `uv run <script>`. Available project scripts: `uv run pytest`, `uv run ruff`, `uv run mypy`.
-
-Non-bash scripts run with `uv run scripts/<script-name>`. Bash scripts run with `bash scripts/<script-name>`.
-
-For string interpolation, heredocs, loops, or advanced xargs flags, write a script in `scripts/` instead.
-
-Use `curl` when you need to see the full response content (WebFetch summarizes).

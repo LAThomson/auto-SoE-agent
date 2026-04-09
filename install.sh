@@ -3,7 +3,7 @@
 #
 # Creates symlinks from the target repo to this scaffold repo,
 # patches devcontainer.json to mount the scaffold into the container,
-# and sets up CLAUDE.md and .gitignore.
+# and sets up .gitignore.
 #
 # Usage: ./install.sh /path/to/inspect_ai
 set -euo pipefail
@@ -93,24 +93,6 @@ link_file ".claude/skills/orchestrator/hypothesis-methodology.md"
 # .claude/settings.json
 link_file ".claude/settings.json"
 
-# --- Handle CLAUDE.md (backup and replace) ---
-echo ""
-echo "Setting up CLAUDE.md..."
-if [ -f "$TARGET_DIR/CLAUDE.md" ] && [ ! -L "$TARGET_DIR/CLAUDE.md" ]; then
-    cp "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR/CLAUDE.md.upstream"
-    echo "  Backed up upstream CLAUDE.md to CLAUDE.md.upstream"
-fi
-ln -sf "$CONTAINER_SCAFFOLD/CLAUDE.md" "$TARGET_DIR/CLAUDE.md"
-echo "  Linked: CLAUDE.md"
-
-# --- Handle CLAUDE.local.md (copy template if not present) ---
-if [ ! -f "$TARGET_DIR/CLAUDE.local.md" ]; then
-    cp "$SCAFFOLD_DIR/CLAUDE.local.md.template" "$TARGET_DIR/CLAUDE.local.md"
-    echo "  Created: CLAUDE.local.md (from template — edit as needed)"
-else
-    echo "  SKIP (exists): CLAUDE.local.md"
-fi
-
 # --- Handle .gitignore (backup and append scaffold entries) ---
 echo ""
 echo "Updating .gitignore..."
@@ -131,8 +113,6 @@ GITIGNORE_ENTRIES=(
     ".claude/skills/orchestrator/"
     ".claude/settings.json"
     ".claude/autopilot/"
-    "CLAUDE.md"
-    "CLAUDE.md.upstream"
     "CLAUDE.local.md"
     ".devcontainer/devcontainer.json.pre-scaffold"
     ".gitignore.pre-scaffold"
@@ -230,7 +210,6 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" update-index --assume-unchanged \
         .devcontainer/devcontainer.json \
         .gitignore \
-        CLAUDE.md \
         2>/dev/null || true
     echo "  Done (git status will stay clean)"
 else

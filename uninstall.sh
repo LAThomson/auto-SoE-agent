@@ -80,15 +80,6 @@ unlink_file ".claude/skills/orchestrator/hypothesis-methodology.md"
 # .claude/settings.json
 unlink_file ".claude/settings.json"
 
-# CLAUDE.md
-unlink_file "CLAUDE.md"
-
-# Restore upstream CLAUDE.md if backup exists
-if [ -f "$TARGET_DIR/CLAUDE.md.upstream" ]; then
-    mv "$TARGET_DIR/CLAUDE.md.upstream" "$TARGET_DIR/CLAUDE.md"
-    echo "  Restored: CLAUDE.md (from backup)"
-fi
-
 # --- Restore devcontainer.json from backup ---
 DEVCONTAINER="$TARGET_DIR/.devcontainer/devcontainer.json"
 if [ -f "$DEVCONTAINER.pre-scaffold" ]; then
@@ -106,17 +97,6 @@ if [ -f "$TARGET_DIR/.gitignore.pre-scaffold" ]; then
     echo "  Restored: .gitignore (from backup)"
 fi
 
-# --- Remove CLAUDE.local.md if it matches the template ---
-if [ -f "$TARGET_DIR/CLAUDE.local.md" ]; then
-    echo ""
-    if [ -f "$SCAFFOLD_DIR/CLAUDE.local.md.template" ] && \
-       diff -q "$TARGET_DIR/CLAUDE.local.md" "$SCAFFOLD_DIR/CLAUDE.local.md.template" > /dev/null 2>&1; then
-        rm "$TARGET_DIR/CLAUDE.local.md"
-        echo "  Removed: CLAUDE.local.md (unmodified template)"
-    else
-        echo "  SKIP: CLAUDE.local.md has been modified — leaving in place"
-    fi
-fi
 
 # --- Clean up empty directories left by symlink removal ---
 echo ""
@@ -142,7 +122,6 @@ if [ -d "$TARGET_DIR/.git" ]; then
     git -C "$TARGET_DIR" update-index --no-assume-unchanged \
         .devcontainer/devcontainer.json \
         .gitignore \
-        CLAUDE.md \
         2>/dev/null || true
     echo "  Done"
 fi

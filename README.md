@@ -1,118 +1,63 @@
-# Eval Science Scaffold
+# Automating Science of Evals
 
-An automated experiment pipeline for studying AI evaluations. Uses Claude Code as the orchestrator and the Claude Agent SDK to run three specialised sub-agents: an environment explorer, an experiment executor, and a transcript analyst.
+<p align="center">
+  <img src="docs/scaffold-diagram.png" alt="Scaffold architecture: User talks to an Orchestrator, which delegates to an Environment Explorer, Experiment Executor, and Transcript Analyst (behind a hypothesis firewall)" width="500">
+</p>
+
+A scaffold for automating science-of-evaluations research in [Inspect AI](https://inspect.aisi.org.uk/) evaluations, built on [Claude Code](https://claude.com/product/claude-code), [Inspect Scout](https://meridianlabs-ai.github.io/inspect_scout/) and the [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents/claude-agent-sdk).
+
+The Orchestrator agent (initiated using the `/orchestrator [research question]` skill) starts by having a conversation with the User to define the scope of the research question. It then carries out the following loop, regularly updating an append-only investigation log to preserve the epistemic trajectory:
+
+1. **Generate falsifiable hypotheses** that are relevant and targeted to the research scope defined in the discussion phase;
+2. Ask the *Environment Explorer* sub-agent to **identify informative, minimal perturbations** in the target eval setting;
+3. Use the *Experiment Executor* sub-agent to **run the eval variations**, handling parallelism, error recovery, and logging;
+4. Give the *Transcript Analyst* sub-agent a neutral topic description from which it can **surface relevant behavioural patterns** in the eval outputs, importantly without it ever directly seeing the original hypothesis; and
+5. **Collate and interpret results** from the Analyst, then determine whether to iterate, conclude, or check in with the User.
+
+When finished, the Orchestrator produces a structured report for the User that summarises the key findings, caveats, and potential next steps.
 
 ## Quick Start
 
 ```bash
-# Clone a target repo (e.g., published inspect-ai)
-git clone https://github.com/UKGovernmentBEIS/inspect_ai.git
-cd inspect_ai
+# Clone the scaffold and your target eval repo
+git clone <this-repo> auto-SoE-agent
+git clone <your-inspect-ai-eval-repo>
+cd <your-inspect-ai-eval-repo>
 
-# Install the scaffold (creates symlinks)
+# Install the scaffold (creates symlinks + patches devcontainer)
 /path/to/auto-SoE-agent/install.sh .
 
-# Set up your local config
-cp CLAUDE.local.md.template CLAUDE.local.md  # if not already created
-# Edit CLAUDE.local.md with your local settings
-
-# Add your API keys (never committed — .env is gitignored)
-echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
+# Add your API keys to a `.env` file
+echo "ANTHROPIC_API_KEY=sk-..." >> .env
 echo "OPENAI_API_KEY=sk-..." >> .env
 
-# Launch the orchestrator in Claude Code
-# /orchestrator [research question]
-```
+# Launch Claude Code (https://claude.com/product/claude-code) and start an investigation
+# /orchestrator [your research question]
 
-## What This Is
-
-The scaffold provides:
-
-- **Three Agent SDK sub-agents** that handle mechanical work:
-  - **Environment Explorer** — reads an eval environment and proposes minimal modifications to test a hypothesis
-  - **Experiment Executor** — runs Inspect AI evaluations and returns structured execution reports
-  - **Transcript Analyst** — analyses eval transcripts using Inspect Scout scanners, blinded to the hypothesis
-
-- **An orchestrator skill** that drives the pipeline from hypothesis to findings, delegating to sub-agents and maintaining scientific rigour
-
-- **Methodological guardrails** including a hypothesis firewall (the analyst never sees the hypothesis), file access controls (agents can only read docs relevant to their role), and methodological checkpoints drawn from evaluation science literature
-
-## Architecture
-
-```
-Orchestrator (Claude Code + /orchestrator skill)
-    │
-    ├── Environment Explorer (Agent SDK, read-only)
-    │
-    ├── Experiment Executor (Agent SDK, runs evals)
-    │
-    └── Transcript Analyst (Agent SDK, Inspect Scout)
-```
-
-Sub-agents are invoked via CLI:
-```bash
-uv run --with claude-agent-sdk --with python-dotenv python subagents/<agent>/main.py input.json
-```
-
-## Installation
-
-The scaffold installs into any target repository via symlinks:
-
-```bash
-./install.sh /path/to/target_repo
-```
-
-This creates symlinks from the target repo back to this scaffold repo. Files are edited in the scaffold repo and tracked in its git history. The target repo stays clean.
-
-To remove:
-```bash
-./uninstall.sh /path/to/target_repo
+# To uninstall (remove symlinks and revert target repo changes):
+# /path/to/auto-SoE-agent/uninstall.sh .
 ```
 
 ## Directory Structure
 
 ```
 auto-SoE-agent/
-├── subagents/       # Agent SDK sub-agents
+├── subagents/
 │   ├── runner.py                  # Shared SDK runner + hooks
 │   ├── cli.py                     # Shared CLI boilerplate
-│   ├── environment_explorer/      # Read-only eval environment analysis
+│   ├── environment_explorer/      # Eval environment analysis
 │   ├── experiment_executor/       # Runs Inspect AI evals
-│   └── transcript_analyst/        # Inspect Scout transcript analysis
+│   └── transcript_analyst/        # Blinded transcript analysis
 ├── .claude/
-│   ├── docs/                      # Reference documents
-│   │   ├── orchestrator_responsibilities.md
-│   │   ├── subagent_invocation.md
-│   │   ├── eval_science_principles.md
-│   │   ├── analyst_delegation_guide.md
-│   │   ├── analyst_interface_contract.md
-│   │   └── inspect_reference.md
+│   ├── docs/                      # Orchestrator reference documents
 │   ├── skills/orchestrator/       # Orchestrator skill definition
 │   └── settings.json              # Claude Code permissions
-├── CLAUDE.md                      # Project instructions
-├── CLAUDE.local.md.template       # Template for local settings
+├── scripts/
+│   └── execute_evals.py           # Parallel eval execution engine
+├── docs/
+│   └── scaffold-diagram.png       # Architecture diagram
+├── .githooks/                     # Git hooks for scaffold repo
 ├── install.sh                     # Install into target repo
 ├── uninstall.sh                   # Remove from target repo
 └── README.md
 ```
-
-## Dependencies
-
-- **Claude Code** with Agent SDK support
-- **claude-agent-sdk** — provided via `uv run --with`, not installed globally
-- **inspect-scout** — provided via `uv run --with`, not installed globally
-- **python-dotenv** — provided via `uv run --with`, loads `.env` for API keys
-- **inspect-ai** — the target repo (published version, not dev build)
-
-## File Access Controls
-
-Sub-agents have restricted file access enforced by PreToolUse hooks:
-
-| Document | Explorer | Executor | Analyst | Orchestrator |
-|----------|:--------:|:--------:|:-------:|:------------:|
-| eval_science_principles.md | blocked | blocked | blocked | reads |
-| analyst_delegation_guide.md | blocked | blocked | blocked | reads |
-| analyst_interface_contract.md | blocked | blocked | reads | reads |
-| inspect_reference.md | — | reads | — | — |
-
-Each agent also has an append-only `memory.md` for persisting learnings across invocations.
