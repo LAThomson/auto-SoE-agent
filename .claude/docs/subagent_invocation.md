@@ -5,7 +5,7 @@ Sub-agents are invoked as CLI scripts via the Agent SDK. The orchestrator writes
 ## General Pattern
 
 ```bash
-uv run --with claude-agent-sdk python subagents/<agent>/main.py <input.json> [--cwd <dir>]
+uv run --with claude-agent-sdk --with python-dotenv python subagents/<agent>/main.py <input.json> [--cwd <dir>]
 ```
 
 - **Input**: JSON file with agent-specific fields (see below)

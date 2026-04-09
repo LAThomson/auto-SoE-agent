@@ -16,6 +16,10 @@ cd inspect_ai
 cp CLAUDE.local.md.template CLAUDE.local.md  # if not already created
 # Edit CLAUDE.local.md with your local settings
 
+# Add your API keys (never committed — .env is gitignored)
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
+echo "OPENAI_API_KEY=sk-..." >> .env
+
 # Launch the orchestrator in Claude Code
 # /orchestrator [research question]
 ```
@@ -47,7 +51,7 @@ Orchestrator (Claude Code + /orchestrator skill)
 
 Sub-agents are invoked via CLI:
 ```bash
-uv run --with claude-agent-sdk python subagents/<agent>/main.py input.json
+uv run --with claude-agent-sdk --with python-dotenv python subagents/<agent>/main.py input.json
 ```
 
 ## Installation
@@ -97,6 +101,7 @@ auto-SoE-agent/
 - **Claude Code** with Agent SDK support
 - **claude-agent-sdk** — provided via `uv run --with`, not installed globally
 - **inspect-scout** — provided via `uv run --with`, not installed globally
+- **python-dotenv** — provided via `uv run --with`, loads `.env` for API keys
 - **inspect-ai** — the target repo (published version, not dev build)
 
 ## File Access Controls

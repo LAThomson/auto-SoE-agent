@@ -58,20 +58,22 @@ The user presents a research question. The orchestrator helps refine it into a t
 
 3. **Determine models.** Agree with the user on which model(s) to evaluate. Record the exact `provider/model-name` strings.
 
-4. **Set execution parameters.** Discuss with the user:
+4. **Verify API key availability.** Based on the chosen models, determine which API keys are needed (e.g., `ANTHROPIC_API_KEY` for Anthropic models, `OPENAI_API_KEY` for OpenAI models). Check that a `.env` file exists in the project root (`test -f .env`). If it does not exist, ask the user to create one with the required keys before proceeding. Do **not** attempt to verify key values, print environment variables, or export keys in the session — keys are loaded automatically by the subagent launcher and must never appear in transcripts.
+
+5. **Set execution parameters.** Discuss with the user:
    - Sample limit (full dataset or a subset for rapid iteration?)
    - Number of epochs per sample
    - Whether to skip preflight validation
    - Parallelism preferences (`max_parallel` — how many eval runs to execute concurrently; if unset, the Executor decides based on environment assessment)
    - Any other Inspect CLI overrides
 
-5. **Agree on cost parameters.** Discuss with the user:
+6. **Agree on cost parameters.** Discuss with the user:
    - *Total API budget*: What is the rough ceiling the user is comfortable spending on this investigation? This anchors all downstream cost decisions.
    - *Run strategy*: Does the user prefer fewer large-N runs (more statistical power per iteration, higher confidence) or more small-N exploratory runs (broader coverage of hypotheses, less confidence per result)? This choice shapes sample limits and iteration count.
    - *Baseline drift policy*: If control conditions produce substantially different results across iterations, should the orchestrator re-run controls to check reproducibility (costs an extra iteration's compute) or flag the inconsistency and continue? Small sample sizes make some drift expected — agree on how much warrants action.
    - *Iteration cap*: Maximum number of investigation loop cycles before stopping, regardless of whether findings are conclusive. This prevents runaway costs on ambiguous questions.
 
-6. **Initialize the investigation log.** Create `investigation-log.md` in the experiment's parent directory to track state across iterations (see State Management below).
+7. **Initialize the investigation log.** Create `investigation-log.md` in the experiment's parent directory to track state across iterations (see State Management below).
 
 ### What can go wrong
 

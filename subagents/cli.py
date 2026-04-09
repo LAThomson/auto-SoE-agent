@@ -88,6 +88,17 @@ def run_cli(config: AgentCLIConfig) -> None:
                 )
                 sys.exit(1)
 
+    # Load .env so API keys are available without manual export.
+    # Keys enter the process environment here and propagate to Agent SDK
+    # subprocesses and inspect eval calls — they never appear in any
+    # Claude Code transcript.
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass  # python-dotenv not available; rely on shell environment
+
     # Allow the Agent SDK to launch a nested Claude Code subprocess.
     # The orchestrator runs inside Claude Code, so CLAUDECODE is always set.
     os.environ.pop("CLAUDECODE", None)
