@@ -44,20 +44,26 @@ unlink_file() {
 
 echo "Removing symlinks..."
 
+# scripts
+unlink_file "scripts/execute_evals.py"
+
 # subagents
 unlink_file "subagents/__init__.py"
 unlink_file "subagents/cli.py"
 unlink_file "subagents/runner.py"
+
 unlink_file "subagents/environment_explorer/__init__.py"
 unlink_file "subagents/environment_explorer/agent.py"
 unlink_file "subagents/environment_explorer/main.py"
 unlink_file "subagents/environment_explorer/memory.md"
 unlink_file "subagents/environment_explorer/system_prompt.py"
+
 unlink_file "subagents/experiment_executor/__init__.py"
 unlink_file "subagents/experiment_executor/agent.py"
 unlink_file "subagents/experiment_executor/main.py"
 unlink_file "subagents/experiment_executor/memory.md"
 unlink_file "subagents/experiment_executor/system_prompt.py"
+
 unlink_file "subagents/transcript_analyst/__init__.py"
 unlink_file "subagents/transcript_analyst/agent.py"
 unlink_file "subagents/transcript_analyst/main.py"

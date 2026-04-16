@@ -51,6 +51,9 @@ link_file() {
 # --- Symlink all scaffold files ---
 echo "Creating symlinks..."
 
+# scripts
+link_file "scripts/execute_evals.py"
+
 # subagents
 link_file "subagents/__init__.py"
 link_file "subagents/cli.py"
@@ -67,9 +70,6 @@ link_file "subagents/experiment_executor/agent.py"
 link_file "subagents/experiment_executor/main.py"
 link_file "subagents/experiment_executor/memory.md"
 link_file "subagents/experiment_executor/system_prompt.py"
-
-# scripts
-link_file "scripts/execute_evals.py"
 
 link_file "subagents/transcript_analyst/__init__.py"
 link_file "subagents/transcript_analyst/agent.py"
@@ -104,6 +104,7 @@ GITIGNORE_ENTRIES=(
     ""
     "# Eval Science Scaffold (symlinks managed by auto-SoE-agent/install.sh)"
     "subagents/"
+    "scripts/execute_evals.py"
     ".claude/docs/analyst_delegation_guide.md"
     ".claude/docs/analyst_interface_contract.md"
     ".claude/docs/eval_science_principles.md"
