@@ -60,7 +60,6 @@ unlink_file "subagents/environment_explorer/system_prompt.py"
 unlink_file "subagents/experiment_executor/__init__.py"
 unlink_file "subagents/experiment_executor/agent.py"
 unlink_file "subagents/experiment_executor/main.py"
-unlink_file "subagents/experiment_executor/memory.md"
 unlink_file "subagents/experiment_executor/system_prompt.py"
 
 unlink_file "subagents/transcript_analyst/__init__.py"

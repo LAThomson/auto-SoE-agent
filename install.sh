@@ -67,7 +67,6 @@ link_file "subagents/environment_explorer/system_prompt.py"
 link_file "subagents/experiment_executor/__init__.py"
 link_file "subagents/experiment_executor/agent.py"
 link_file "subagents/experiment_executor/main.py"
-link_file "subagents/experiment_executor/memory.md"
 link_file "subagents/experiment_executor/system_prompt.py"
 
 link_file "subagents/transcript_analyst/__init__.py"

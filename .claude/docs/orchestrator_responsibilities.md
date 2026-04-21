@@ -9,7 +9,7 @@ The orchestrator is the only agent that talks to the user, holds the hypothesis,
 | Agent | Receives | Returns |
 |-------|----------|---------|
 | Environment Explorer | Hypothesis, experiment description, environment path, optional constraints | Structured briefing: environment summary, pipeline model, modification sites with diffs, variant dependencies, risk assessment, open questions (see `explorer_interface_contract.md`) |
-| Experiment Executor | Experiment directory, condition specs, models, execution overrides | Execution report: log paths, status per condition-model pair, errors, retry flags |
+| Experiment Executor | Experiment name, directory, condition specs, models, optional overrides | Structured execution report: summary, preflight exclusions, execution matrix, error summary, transcript termination metadata, concurrency decision, execution summary, additional notes (see `executor_interface_contract.md`) |
 | Transcript Analyst | Topic (not hypothesis), transcript source (condition→path mapping), scanning model?, constraints? | Scanner definitions, validation metrics, quantified results, scan results path, transcript exclusions, excerpts |
 
 The orchestrator does everything else.
@@ -179,73 +179,83 @@ This is entirely the orchestrator's work. No sub-agent handles this.
 
 ### Step 2d: Construct Executor Input and Launch Executor
 
+The request and report formats for the Executor are defined in `executor_interface_contract.md`. That document is the single source of truth; consult it for field-level and section-level detail.
+
 **Orchestrator work:**
 
-1. **Build the condition specification.** Using the Explorer's condition activation parameters table, construct a mapping for each condition:
-   - Condition name (snake_case, from Explorer)
-   - Task file path (relative to experiment directory)
-   - Task arguments (`-T` key=value pairs that differ between conditions)
+1. **Build the condition specification.** From the conditions constructed in Step 2b and the activation pattern chosen in Step 2c, assemble a mapping for each condition per `executor_interface_contract.md §Conditions`:
+   - Condition name (`snake_case`)
+   - Task file path (relative to `experiment_dir`)
+   - Task arguments (`-T key=value` pairs that differ between conditions)
 
-2. **Assemble the Executor input JSON** (see `subagent_invocation.md` for the full schema):
-   - `experiment_name`: snake_case identifier (used in `--tags "exp:<name>"`)
-   - `experiment_dir`: parent experiment directory path
-   - `conditions`: the mapping from step 1 above
-   - `models`: list of `provider/model-name` strings
-   - `overrides` (optional): `sample_limit`, `epochs`, `skip_preflight`, `max_connections`, `runs_per_condition`
+2. **Assemble the Executor input JSON** per `executor_interface_contract.md §Request Format`. Required: `experiment_name`, `experiment_dir`, `conditions`, `models`. Optional `overrides` supports `sample_limit`, `epochs`, `skip_preflight`, `max_parallel`, `max_connections`, `runs_per_condition`.
 
 3. **Launch the Experiment Executor sub-agent** via CLI script (see `subagent_invocation.md`).
 
 4. **Save the Executor's stdout report** to `<experiment_dir>/artefacts/executor/report.md`.
 
-**Example input JSON:**
-```json
-{
-    "experiment_name": "explicit_goal_framing",
-    "experiment_dir": "/path/to/explicit_goal_framing_v1/",
-    "conditions": {
-        "control": {"task": "task.py", "args": {"system": "system_prompt_control.txt"}},
-        "treatment": {"task": "task.py", "args": {"system": "system_prompt_treatment.txt"}}
-    },
-    "models": ["anthropic/claude-sonnet-4-5-20250929"],
-    "overrides": {"sample_limit": 50, "epochs": 1, "skip_preflight": false}
-}
-```
-
 **What can go wrong:**
-- The orchestrator passes a task file path that doesn't exist in the experiment directory. Double-check paths before launching.
-- The orchestrator forgets to include an execution parameter that was discussed with the user. Refer to the investigation log.
+- A task file path in `conditions` does not resolve inside the experiment directory. Double-check paths before launching.
+- Execution parameters agreed with the user in Phase 1 are missing from `overrides`. Refer to the investigation log.
+- `-T` argument values are the wrong type for the task's signature (e.g., strings where numbers are expected). The Executor's preflight will catch these, but you can save an iteration by checking against the task file first.
 
 ---
 
 ### Step 2e: Review Executor Report
 
-**What the orchestrator receives:**
-- Parent log directory path
-- Table: condition-model pairs → log paths, status, samples completed/total, retries, duration
-- Error summary (transient recovered, sample-level errors, structural failures)
-- Retry flags (which condition-model pairs have retried samples)
-- Execution summary (total attempted, completed, failed)
+The report structure is defined in `executor_interface_contract.md §Report Format`. Read the Summary first — 3–5 sentences naming the final disposition of every condition-model pair and flagging the most decision-critical observation. The remaining sections provide drill-down.
 
-**Orchestrator work:**
+**Do not read eval results.** Between receiving the Executor's report and receiving the Analyst's report, do not read eval log file contents, extract scores, compute aggregate metrics, or run `inspect log list/dump` on experiment log directories. The Executor's report contains everything needed to decide whether to proceed: Execution Matrix status, Error Summary categories and evidence, and Transcript Termination Metadata. You may verify that log *files exist* (e.g., `ls` the log directory to confirm paths before passing them to the Analyst), but you must not read their *contents*. The Analyst's blinded report must be your first view of the experimental results. Reading scores early contaminates your interpretation of the Analyst's findings — you will unconsciously seek confirmation of what you already know.
 
-1. **Check for complete success.** If all condition-model pairs completed with status "success" and no sample errors, proceed to the Analyst.
+**Interpreting the Executor's report:**
 
-2. **Handle partial failures.** If some conditions failed:
-   - If failures are symmetric across conditions (both control and treatment lost similar proportions), the data may still be usable but note this for the Analyst.
-   - If failures are asymmetric (one condition failed significantly more than another), this is a potential confound. Consider re-running the failed pairs or reporting the asymmetry to the user.
-   - For structural failures, diagnose the root cause. It may indicate a problem with the modifications applied in Step 2c.
+1. **Read Preflight Exclusions before the Execution Matrix.** Excluded pairs never reached full execution, so their absence from the Matrix is not a bug but a gate. For each exclusion:
+   - *Reason*: `structural` means the eval could not run at all; `all-samples-deterministic-sample-error` means the `--limit 3` retest found persistent sample failures and proceeding would waste compute.
+   - *Evidence*: structural exclusions ship exit code, command, and stderr tail. Read the stderr to diagnose whether the cause is (i) a bug in the modifications applied in Step 2c, (ii) a missing infrastructure prerequisite (API key, Docker daemon, task file), or (iii) an Inspect-side issue.
+   - *Asymmetric exclusions*: if all excluded pairs are in the same condition (e.g., every `treatment` pair excluded while every `control` pair runs), this is a strong signal that Step 2c broke the eval for that condition. Re-apply the Explorer's diffs, verify them against the Pipeline Model, and re-run.
 
-3. **Handle total failure.** If all conditions failed, do not proceed to the Analyst. Diagnose the issue (check the Executor's error details), fix if possible, and re-run. If the problem is unfixable, escalate to the user.
+2. **Read the Execution Matrix for the pairs that ran.** Scan the `Status` column for anything other than `success`. The `Sample-Level Retries` column flags pairs where `--retry-on-error` fired; non-zero retries introduce distribution-shift concerns (see item 7 below).
 
-4. **Note retry flags.** If any condition-model pairs had retried samples, record this. The Transcript Analyst's report should be read with awareness that retried samples may exhibit distribution shift (retried samples may have different characteristics than non-retried ones).
+3. **Interpret the Error Summary by category.** Each category gates a different action:
+   - **Transient (recovered)**: informational. The eval completed; proceed.
+   - **Sample-level**: the eval completed but some samples errored. The Analyst will quantify per-condition attrition. Proceed, but record the attrition for the Analyst's delegation brief.
+   - **Structural**: the eval did not run to completion. Do not proceed without investigation. Read the evidence (exit code, command, stderr) to diagnose. Common signatures:
+     - `ImportError` referencing a file you created in Step 2c → your modification introduced a bug; re-check the diff rather than re-running.
+     - `Authentication` / `401` / `API key` in stderr → verify `.env`; do not print key values.
+     - `Docker` / `sandbox` errors → sandbox infrastructure; may need `inspect sandbox cleanup docker`.
+     - `No such file` referencing a task file → Step 2d path was wrong.
 
-5. **Record in investigation log.** Update the investigation log with execution results.
+4. **Handle partial failures.** If some pairs failed but not all:
+   - *Symmetric failures* (similar rates across conditions) — data may still be usable; note for the Analyst's delegation brief.
+   - *Asymmetric failures* (one condition failed more than another) — this is a confound. Consider re-running the failed pairs, investigating whether the treatment modifications broke the eval, or reporting the asymmetry to the user. Do not silently proceed.
 
-**Do not read eval results.** Between receiving the Executor's report and receiving the Analyst's report, do not read eval log file contents, extract scores, compute aggregate metrics, or run `inspect log list/dump` on experiment log directories. The Executor's report already contains everything needed to decide whether to proceed (status, sample counts, errors). You may verify that log *files exist* (e.g., `ls` the log directory to confirm paths before passing them to the Analyst), but you must not read their *contents*. The Analyst's blinded report must be your first view of the experimental results. Reading scores early contaminates your interpretation of the Analyst's findings — you will unconsciously seek confirmation of what you already know.
+5. **Handle total failure.** If the Execution Matrix has no successful pairs (after accounting for Preflight Exclusions), do not launch the Analyst. Diagnose from the evidence, fix if possible, and re-run. If the problem is unfixable, escalate to the user.
+
+6. **Read Transcript Termination Metadata.** Per-pair counts of transcripts with no assistant messages, limit hits, and error terminations. Before delegating to the Analyst:
+   - If a condition has many empty (no-assistant-msg) transcripts, the Analyst will have little behavioural signal to scan. Note this as a limitation in the delegation brief.
+   - If limit hits or error terminations differ markedly between conditions, this is a form of differential attrition — flag it as a potential confound.
+   - These counts describe transcript *shape*, not *quality*. A transcript with assistant messages, no limit hit, and no termination error is unremarkable here regardless of whether its content looks strange — content judgement is the Analyst's job.
+
+7. **Communicate retry flags and attrition to the Analyst.** Sample-Level Retries and sample-level errors represent populations the Analyst must reason about. When you construct the Analyst's request in Step 2g:
+   - Include per-condition sample-level retry counts and sample-error counts as a caveat.
+   - Note that retried samples may exhibit distribution shift relative to non-retried ones (the retry succeeded conditional on a prior failure, which can introduce selection effects).
+
+8. **Audit the Concurrency Decision.** The structured fields let you verify the Executor's choice was reasonable. If `Reductions applied during execution` is non-empty, the initial concurrency estimate was wrong and some re-runs occurred. This is not a failure but is worth noting if wall-clock matters for the investigation.
+
+9. **Record in investigation log.** Update the investigation log with: condition-model pairs completed / failed / excluded, key errors, retry counts, transcript termination patterns, and chosen concurrency.
+
+**Common pitfalls:**
+
+- **Re-running a structural failure without fixing its cause.** If the stderr shows an ImportError from your Step 2c modifications, re-running will not help. Fix the modification first.
+- **Treating sample-level errors as transient.** Sample-level errors represent real attrition. They do not disappear on re-run unless the underlying cause is genuinely transient (which is usually caught at the process level and classified as Transient by the Executor already).
+- **Ignoring asymmetric preflight exclusions.** Symmetric exclusions across conditions suggest an infrastructure problem. Asymmetric exclusions almost always mean Step 2c broke something for a specific condition — re-applying the diffs is usually the fix.
+- **Proceeding to the Analyst without forwarding attrition.** The Analyst cannot detect differential attrition from transcripts alone; you must pass the per-condition counts forward.
 
 **What can go wrong:**
-- The Executor's report is ambiguous about whether a failure is structural or transient. Read the error details carefully.
-- The log paths in the report don't exist (Executor bug). Verify log paths exist before passing them to the Analyst.
+
+- The Executor's report is ambiguous about whether a failure is structural or transient. Re-read the evidence rather than asking the Executor for clarification — delegations are single-shot, and re-invoking is more expensive than careful reading.
+- Log paths in the Matrix do not exist (Executor bug). Verify log paths exist before passing them to the Analyst.
+- A condition-model pair present in the request is missing from both the Matrix and Preflight Exclusions. This violates the contract's accountability requirement; escalate rather than silently proceeding.
 
 ---
 
@@ -505,11 +515,11 @@ Each iteration gets its own directory. Previous iterations are never modified.
 ### Explorer reports no viable modification sites
 The Explorer has read the environment and concluded there is no site where the hypothesis could be tested given the environment's structure, or that every candidate site carries a Blocker. Report to user with the Explorer's reasoning (drawn from the Summary, Global Risk Assessment, and Uncertainty & Open Questions sections). Ask the user to revise the hypothesis or choose a different eval environment.
 
-### Executor reports all conditions failed
-Do not launch the Analyst. Diagnose the failure from the Executor's error details. Common causes: API key issues, sandbox misconfiguration, task file errors introduced by the orchestrator's modifications in Step 2c. Fix and re-run, or escalate to user.
+### Executor reports no successful condition-model pairs
+Do not launch the Analyst. Read the Preflight Exclusions and Error Summary sections for evidence (exit codes, commands, stderr tails) and diagnose from there. Common causes: API key issues, sandbox misconfiguration, task file errors introduced by the orchestrator's modifications in Step 2c. Fix and re-run, or escalate to user. See Step 2e for full interpretation guidance.
 
 ### Executor reports asymmetric failure rates
-If 80% of control samples succeeded but only 30% of treatment samples did, the data is confounded. Do not treat this as a valid comparison. Re-run the failed condition, or investigate whether the treatment modifications broke the eval.
+Asymmetry across conditions — either at preflight (every `treatment` pair excluded while every `control` pair runs) or in full execution (e.g., 80% of control samples succeeded but only 30% of treatment samples) — is a confound. Do not treat this as a valid comparison. Re-run the failed condition, or investigate whether the treatment modifications broke the eval. Asymmetric Preflight Exclusions in particular almost always mean Step 2c broke something for a specific condition — re-applying the Explorer's diffs is usually the fix.
 
 ### Analyst finds no patterns related to the topic
 This is a valid finding. Report it as "no observable behavioural differences related to [topic]." Do not iterate just to find something — absence of signal is informative.
@@ -533,7 +543,7 @@ If Model A succeeded but Model B failed entirely, the orchestrator can still sen
 
 3. **Iterating without updating the investigation log.** State loss across iterations leads to repeated work, contradictory modifications, and untraceable decisions.
 
-4. **Proceeding after total execution failure.** If the Executor couldn't run any conditions, there's nothing for the Analyst to analyze. Diagnose first.
+4. **Proceeding after total execution failure.** If no condition-model pair reached `status=success` or `status=sample-level-errors` (all excluded at preflight or failed in full execution), there is no usable data for the Analyst. Diagnose from the Executor's evidence before re-running.
 
 5. **Ignoring the Analyst's limitations section.** The Analyst is required to flag limitations. If the orchestrator doesn't read and relay them, the user gets an incomplete picture.
 
@@ -543,4 +553,4 @@ If Model A succeeded but Model B failed entirely, the orchestrator can still sen
 
 8. **Applying diffs without verifying them.** Always read modified files back after applying changes. A misapplied diff can silently confound the experiment.
 
-9. **Reading eval results before the Analyst reports.** The orchestrator must not read log file contents, extract scores, or compute metrics between the Executor completing and the Analyst reporting. The Executor's report provides sufficient information (status, sample counts, errors) to decide whether to proceed. Reading scores early primes the orchestrator to seek confirmation rather than genuinely interpreting the Analyst's blinded findings.
+9. **Reading eval results before the Analyst reports.** The orchestrator must not read log file contents, extract scores, or compute metrics between the Executor completing and the Analyst reporting. The Executor's report provides sufficient information (Execution Matrix status, Error Summary, Transcript Termination Metadata) to decide whether to proceed. Reading scores early primes the orchestrator to seek confirmation rather than genuinely interpreting the Analyst's blinded findings.

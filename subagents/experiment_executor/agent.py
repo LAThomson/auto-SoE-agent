@@ -8,9 +8,10 @@ from subagents.runner import run_agent
 
 ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep"]
 DISALLOWED_TOOLS = ["Edit", "WebSearch", "WebFetch"]
-MEMORY_FILE = "subagents/experiment_executor/memory.md"
 
 # Files this agent must not read. Mapping of filename pattern → reason.
+# The Executor must read its own contract (executor_interface_contract.md);
+# it is intentionally absent from this list.
 RESTRICTED_FILES: dict[str, str] = {
     "eval_science_principles.md": "Orchestrator-only methodological reference.",
     "analyst_delegation_guide.md": "Orchestrator-only delegation guide.",
@@ -48,6 +49,10 @@ async def run_experiment_executor(cwd: str | None = None, **data: Any) -> str:
 {json.dumps(data.get("overrides") or {}, indent=2)}
 ```
 """
+    # Memory is disabled for the Executor: each invocation is self-contained,
+    # per the interface contract. Within-investigation execution learnings
+    # flow through the contract's `overrides` channel; cross-investigation
+    # patterns are curated into the reference doc or system prompt.
     return await run_agent(
         prompt=prompt,
         system_prompt=SYSTEM_PROMPT,
@@ -56,5 +61,5 @@ async def run_experiment_executor(cwd: str | None = None, **data: Any) -> str:
         agent_name="Experiment executor",
         cwd=cwd,
         restricted_files=RESTRICTED_FILES,
-        memory_file=MEMORY_FILE,
+        memory_file=None,
     )
