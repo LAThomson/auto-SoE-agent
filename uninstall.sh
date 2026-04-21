@@ -55,7 +55,6 @@ unlink_file "subagents/runner.py"
 unlink_file "subagents/environment_explorer/__init__.py"
 unlink_file "subagents/environment_explorer/agent.py"
 unlink_file "subagents/environment_explorer/main.py"
-unlink_file "subagents/environment_explorer/memory.md"
 unlink_file "subagents/environment_explorer/system_prompt.py"
 
 unlink_file "subagents/experiment_executor/__init__.py"

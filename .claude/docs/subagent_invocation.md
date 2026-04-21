@@ -24,13 +24,15 @@ The orchestrator should: (1) write the input JSON to a temp file, (2) run the co
 {
     "hypothesis": "Adding X to the system prompt increases Y...",
     "experiment_description": "Testing whether X affects Y...",
-    "environment_path": "/absolute/path/to/eval/environment"
+    "environment_path": "/absolute/path/to/eval/environment",
+    "constraints": "Focus on system prompt and scoring; skip the scaffold directory."
 }
 ```
 
 - `environment_path` must be an existing directory
+- `constraints` is optional; free-form string passed through to the Explorer to shape or narrow exploration
 
-**Returns**: File catalogue, modification sites with diffs, recommended conditions, activation parameters, risk assessment.
+**Returns**: Structured markdown report. See `explorer_interface_contract.md` for the full request and report format.
 
 ## Experiment Executor
 

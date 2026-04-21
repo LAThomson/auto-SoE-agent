@@ -103,11 +103,11 @@ A confound is anything that varies between conditions other than the intended IV
 
 ### Using the Explorer's Risk Assessment
 
-The Environment Explorer produces a risk assessment covering confounds, cross-file interactions, information leakage, scoring concerns, and ecological validity. Use it as follows:
+The Environment Explorer produces per-site risks and a global Risk Assessment covering confounds, cross-condition interactions, information leakage, scoring concerns, and ecological validity. The Explorer flags **Blocker** on any risk that would invalidate the experiment; non-Blocker risks are described in prose (see `explorer_interface_contract.md`). Use the report as follows:
 
-- **High-severity risks (information leakage, scoring artifacts):** Address before proceeding. These can invalidate the entire experiment.
-- **Medium-severity risks (prompt length differences, formatting):** Mitigate if practical. Note as a caveat if not.
-- **Low-severity risks (minor ecological validity concerns):** Acknowledge in the final report but don't let them block the experiment.
+- **Blocker flags** (global or per-site/variant): these must be addressed before proceeding. A global Blocker means redesign or hypothesis revision; a per-variant Blocker means that variant is unusable (others at the same site may be fine).
+- **Non-Blocker risks:** weigh them against budget, iteration history, and the hypothesis itself. Mitigate where practical (cleaner manipulation, placebo condition, matched length), note as caveats in the final report where not.
+- **Uncertainty & Open Questions:** the Explorer enumerates items it could not resolve from static reading. Resolve these (read the relevant file, ask the user, run a cheap sanity check) before applying modifications.
 
 ## Failure Handling
 

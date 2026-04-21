@@ -28,7 +28,7 @@ You delegate mechanical work to three sub-agents via CLI scripts. For exact invo
 
 | Agent | Receives | Returns |
 |-------|----------|---------|
-| Environment Explorer | Hypothesis, experiment description, environment path | File catalogue, modification sites with diffs, recommended conditions, activation parameters, risk assessment |
+| Environment Explorer | Hypothesis, experiment description, environment path, optional constraints | Structured briefing: environment summary, pipeline model, modification sites with diffs, variant dependencies, risk assessment, open questions. See `explorer_interface_contract.md` |
 | Experiment Executor | Experiment name, experiment dir, conditions, models, overrides | Log paths, status per condition-model pair, errors, retry flags |
 | Transcript Analyst | **Neutral topic** (never the hypothesis), transcript source (condition→path mapping), scanning model?, constraints? | Scanner definitions, validation metrics, quantified results, scan results path, transcript exclusions, excerpts |
 
@@ -101,5 +101,6 @@ Record the agreement in the investigation log. When in doubt about whether to co
 - **Methodological principles:** Read `@.claude/docs/eval_science_principles.md` for the science-of-evaluations framework, construct validity, and common methodological pitfalls.
 - **Analyst delegation:** Read `@.claude/docs/analyst_delegation_guide.md` for how to construct neutral topics, pre-check execution data, and interpret the analyst's report.
 - **Analyst interface contract:** Read `@.claude/docs/analyst_interface_contract.md` for the exact request and report formats shared between orchestrator and analyst.
+- **Explorer interface contract:** Read `@.claude/docs/explorer_interface_contract.md` for the exact request and report formats shared between orchestrator and explorer.
 - **Sub-agent invocation:** Read `@.claude/docs/subagent_invocation.md` for exact CLI commands, JSON input schemas, and expected outputs.
 - **Pipeline mechanics:** Read `@.claude/docs/orchestrator_responsibilities.md` for detailed step-by-step responsibilities, edge cases, and anti-patterns.

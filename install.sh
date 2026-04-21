@@ -62,7 +62,6 @@ link_file "subagents/runner.py"
 link_file "subagents/environment_explorer/__init__.py"
 link_file "subagents/environment_explorer/agent.py"
 link_file "subagents/environment_explorer/main.py"
-link_file "subagents/environment_explorer/memory.md"
 link_file "subagents/environment_explorer/system_prompt.py"
 
 link_file "subagents/experiment_executor/__init__.py"

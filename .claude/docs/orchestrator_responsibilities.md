@@ -8,7 +8,7 @@ The orchestrator is the only agent that talks to the user, holds the hypothesis,
 
 | Agent | Receives | Returns |
 |-------|----------|---------|
-| Environment Explorer | Hypothesis, experiment description, environment path | Structured report: file catalogue, modification sites with diffs, recommended conditions with activation parameters, risk assessment |
+| Environment Explorer | Hypothesis, experiment description, environment path, optional constraints | Structured briefing: environment summary, pipeline model, modification sites with diffs, variant dependencies, risk assessment, open questions (see `explorer_interface_contract.md`) |
 | Experiment Executor | Experiment directory, condition specs, models, execution overrides | Execution report: log paths, status per condition-model pair, errors, retry flags |
 | Transcript Analyst | Topic (not hypothesis), transcript source (condition→path mapping), scanning model?, constraints? | Scanner definitions, validation metrics, quantified results, scan results path, transcript exclusions, excerpts |
 
@@ -87,51 +87,55 @@ The user presents a research question. The orchestrator helps refine it into a t
 
 ### Step 2a: Launch Environment Explorer
 
-**Input to Explorer:**
-- Experiment description (plain English)
-- Hypothesis (specific, testable)
-- Environment path (directory containing the eval)
+The request and report formats for the Explorer are defined in `explorer_interface_contract.md`. That document is the single source of truth; consult it for field-level and section-level detail.
 
 **Orchestrator work:**
-- Construct the Explorer input JSON and launch via CLI script (see `subagent_invocation.md`).
+- Construct the Explorer input JSON per `explorer_interface_contract.md §Request Format` and launch via CLI script (see `subagent_invocation.md`).
 - The hypothesis IS passed to the Explorer — this is the one agent that receives it directly. (The Transcript Analyst must NOT receive it.)
+- If prior iterations have narrowed the scope, pass any shaping preferences via the optional `constraints` field (e.g., "focus on system prompt and scoring; skip the scaffold directory").
 - Save the Explorer's stdout report to `<experiment_dir>/artefacts/explorer/report.md`.
 
 **What can go wrong:**
-- The Explorer reports that the hypothesis is untestable with the given environment (e.g., the eval doesn't have the right structure). Report to user and revise.
+- The Explorer reports that no viable modification sites exist with the given environment and hypothesis. Report to user and revise.
 - The Explorer reports that the environment path is empty or unreadable. Check the path and retry.
 
 ---
 
 ### Step 2b: Review Explorer Report
 
-**What the orchestrator receives:**
-- File catalogue (all files, their types and roles)
-- Modification sites with diffs (before/after text, line numbers)
-- Recommended experimental conditions table (condition names, variant choices per site)
-- Condition activation parameters table (which parameters or files to vary per condition)
-- Risk assessment (confounds, cross-file interactions, information leakage, scoring concerns, ecological validity)
+The report structure is defined in `explorer_interface_contract.md §Report Format`. The orchestrator should read the Explorer's report end-to-end before proceeding; the Summary section flags global Blockers early, but the full report carries the reasoning the orchestrator needs for condition construction.
 
-**Orchestrator work:**
+**Interpreting the Explorer's report:**
 
-1. **Review the risk assessment.** If the Explorer flagged confounds, information leakage, or scoring risks, decide whether to accept, mitigate, or reject the proposed design. If risks are severe, consider revising the hypothesis or the approach before proceeding.
+1. **Attend to Blocker flags first.** A **Blocker** flag in the Explorer's report means "this would invalidate the experiment." Scope determines response:
+   - *Global Blocker* (in the Global Risk Assessment section) — no condition under this design is viable. Redesign the manipulation or revise the hypothesis before proceeding.
+   - *Per-site or per-variant Blocker* — that specific variant is unusable. Other variants at the same site may be fine.
+   - *Per-condition Blocker* — that specific condition is unusable, others may still be runnable.
 
-2. **Check for dirty paraphrases** (see `eval_science_principles.md`). Review each proposed diff and ask: does this modification change only the intended variable, or does it simultaneously alter formatting, length, style, or other incidental properties? Any modification to an evaluation simultaneously modifies its formatting properties. If the diff changes more than one thing, consider whether a cleaner manipulation exists or whether a placebo condition (same magnitude of change, orthogonal content) is needed to distinguish content effects from perturbation effects.
+   The Explorer errs toward over-flagging (as specified by the contract's asymmetric error preference). Treat each Blocker as a serious candidate for design change, but check it against the full diff and the Pipeline Model before acting.
 
-3. **Select conditions.** If the Explorer proposed multiple variant options or additional arms beyond control/treatment, decide which to implement. More conditions means more eval runs (cost and time).
+2. **Resolve the Uncertainty & Open Questions section before proceeding.** Each item names what the orchestrator needs to do to resolve it (read a specific file, ask the user, run a cheap sanity check). Unresolved items can silently confound the experiment; do not apply modifications in Step 2c while open questions remain.
 
-4. **Review condition activation parameters.** Confirm the table makes sense:
-   - If conditions differ by task parameters: note the parameter names and values. These become `-T` flags.
-   - If conditions differ by task file: note the separate file paths. The orchestrator will need to create these files.
-   - If conditions differ by model only: note that the Executor just varies `--model`.
+3. **Use the Pipeline Model to sanity-check proposed sites.** For each modification site the Explorer proposed, confirm from the Pipeline Model that the site actually lies on the path affecting the hypothesised variable. If the Pipeline Model and a proposed site disagree — for example, the site is in a file the Pipeline Model describes as peripheral — the Explorer's reasoning is probably incoherent; flag the discrepancy rather than proceeding.
 
-5. **Review cross-file interactions.** If the Explorer flagged coordinated changes across multiple files, plan to apply all of them together. Missing one could introduce confounds or break the eval.
+4. **Construct conditions from the Explorer's raw material.** The Explorer reports modification sites, variants at each site, and (if applicable) Variant Dependencies. It does not recommend which conditions to run. The orchestrator constructs conditions by:
+   - Choosing a variant at each relevant site. Discard any variant carrying a Blocker flag.
+   - Respecting Variant Dependencies — if the Explorer recorded that Variant A at Site 1 requires Variant B at Site 2, do not construct a condition that pairs them otherwise.
+   - Naming each condition in filesystem-safe `snake_case` (e.g., `control`, `treatment_explicit_goal`).
+   - Deciding factorial vs. selected design: if the hypothesis concerns a single IV, control + treatment at the relevant site(s) suffices. If the hypothesis concerns an interaction between multiple IVs, run all coherent combinations of variants. Cost and iteration-budget constraints may require pruning; prune by scientific relevance, not by convenience.
 
-6. **Consider evaluation item quality** (see `eval_science_principles.md`). Before attributing model behaviour to the construct under study, check whether the evaluation items are well-formed. Roughly 9% of items in well-known benchmarks contain errors. If the Explorer flagged scoring or task validity concerns, factor these into the experimental design — they may explain more of the variance than the intended manipulation.
+**Additional methodological checks:**
+
+5. **Check for dirty paraphrases** (see `eval_science_principles.md`). Review each proposed diff and ask: does this modification change only the intended variable, or does it simultaneously alter formatting, length, style, or other incidental properties? Any modification to an evaluation simultaneously modifies its formatting properties. If the diff changes more than one thing, consider whether a cleaner manipulation exists or whether a placebo condition (same magnitude of change, orthogonal content) is needed to distinguish content effects from perturbation effects. The Explorer should have flagged this per-site, but verify independently.
+
+6. **Review cross-file interactions.** The Explorer reports cross-file dependencies within modification sites and as Variant Dependencies. Plan to apply all coordinated changes together. Missing one could introduce confounds or break the eval.
+
+7. **Consider evaluation item quality** (see `eval_science_principles.md`). Before attributing model behaviour to the construct under study, check whether the evaluation items are well-formed. Roughly 9% of items in well-known benchmarks contain errors. If the Explorer flagged scoring or task validity concerns, factor these into the experimental design — they may explain more of the variance than the intended manipulation.
 
 **What can go wrong:**
 - The Explorer's proposed diffs are ambiguous or reference files that have changed since it read them. Re-read the files and verify the diffs still apply.
-- The condition activation parameters don't clearly map to Inspect invocations. The orchestrator may need to read the task file to understand its parameterization.
+- The Explorer's variants and the Pipeline Model are inconsistent (e.g., a modification site is proposed in a file the Pipeline Model treats as peripheral). Investigate rather than proceeding.
+- Too many unresolved items in Uncertainty & Open Questions to proceed confidently. Resolve them or escalate to the user before Step 2c.
 
 ---
 
@@ -157,10 +161,10 @@ This is entirely the orchestrator's work. No sub-agent handles this.
    ```
    This directory is passed to sub-agents that produce file outputs. Each sub-agent creates its own subdirectory (e.g., `artefacts/analyst/`). The orchestrator saves stdout reports from sub-agents that cannot write files themselves (the Environment Explorer) to `artefacts/explorer/report.md`.
 
-2. **Apply the Explorer's diffs.** For each modification site in each condition:
-   - If using **parameter-based conditions** (Pattern A): apply any shared modifications that are common to all conditions, then rely on different `-T` values to activate each condition at runtime. This may involve creating condition-specific copies of files referenced by the parameter (e.g., `system_prompt_control.txt`, `system_prompt_treatment.txt`).
-   - If using **separate task files** (Pattern B): create a copy of the task file for each condition, applying the relevant diffs to each copy. Name them with the condition name (e.g., `task_control.py`, `task_treatment.py`).
-   - If using **model variation only** (Pattern C): no file modifications needed beyond any shared setup.
+2. **Apply the Explorer's diffs and choose the activation pattern.** The Explorer provides diffs with exact file paths and line ranges but does not prescribe how conditions are activated at runtime — that is Inspect-specific translation the orchestrator handles here. Choose one of the following patterns based on the diffs:
+   - **Parameter-based conditions** (Pattern A): apply any shared modifications common to all conditions, then rely on different `-T` values to activate each condition at runtime. This may involve creating condition-specific copies of files referenced by the parameter (e.g., `system_prompt_control.txt`, `system_prompt_treatment.txt`).
+   - **Separate task files** (Pattern B): create a copy of the task file for each condition, applying the relevant diffs to each copy. Name them with the condition name (e.g., `task_control.py`, `task_treatment.py`).
+   - **Model variation only** (Pattern C): no file modifications needed beyond any shared setup.
 
 3. **Verify the modifications.** Read each modified file back and confirm the changes match the Explorer's diffs. This catches copy/paste errors and merge conflicts.
 
@@ -353,7 +357,7 @@ Before interpreting findings, run lightweight consistency checks. See `analyst_d
 
 3. **Iterate with different execution parameters.** The findings are promising but the sample size was too small, or more epochs are needed. Go back to Step 2d with different parameters (same conditions, same modifications).
 
-4. **Iterate with additional conditions.** The findings suggest a confound or an unexplored variable. Go back to Step 2a asking the Explorer for additional conditions.
+4. **Iterate with additional conditions.** The findings suggest a confound or an unexplored variable. Go back to Step 2a asking the Explorer to identify additional modification sites or variants relevant to the new angle, then construct conditions from its raw material per Step 2b.
 
 5. **Escalate to user.** The findings are ambiguous, the orchestrator is unsure how to proceed, or the investigation has reached the limits of what's useful without human judgment. Present what's been found and ask for direction.
 
@@ -426,9 +430,12 @@ The orchestrator maintains `investigation-log.md` in the experiment's parent dir
 
 ## Iteration 1
 ### Explorer Report Summary
-- Conditions proposed: <list>
-- Key risks flagged: <summary>
-- Conditions selected: <list>
+- Modification sites proposed: <count and brief list>
+- Blockers flagged: <summary, or "none">
+- Open questions resolved: <list, if any>
+
+### Conditions Constructed
+- <list of named conditions with variant choices per site>
 
 ### Modifications Applied
 - Experiment directory: <path>
@@ -495,8 +502,8 @@ Each iteration gets its own directory. Previous iterations are never modified.
 
 ## Edge Cases
 
-### Explorer says the hypothesis is untestable
-Report to user with the Explorer's reasoning. Ask the user to revise the hypothesis or choose a different eval environment.
+### Explorer reports no viable modification sites
+The Explorer has read the environment and concluded there is no site where the hypothesis could be tested given the environment's structure, or that every candidate site carries a Blocker. Report to user with the Explorer's reasoning (drawn from the Summary, Global Risk Assessment, and Uncertainty & Open Questions sections). Ask the user to revise the hypothesis or choose a different eval environment.
 
 ### Executor reports all conditions failed
 Do not launch the Analyst. Diagnose the failure from the Executor's error details. Common causes: API key issues, sandbox misconfiguration, task file errors introduced by the orchestrator's modifications in Step 2c. Fix and re-run, or escalate to user.
