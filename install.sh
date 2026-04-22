@@ -27,6 +27,60 @@ echo "  Target:   $TARGET_DIR"
 echo "  Container mount: $CONTAINER_SCAFFOLD"
 echo ""
 
+# In-target marker tracking symlinked directories that install.sh promoted
+# to real directories. Used by uninstall.sh to reverse them. Each line:
+# "<absolute-target-path>\t<absolute-upstream-path>"
+LOCALIZATION_MARKER="$TARGET_DIR/.scaffold-localizations"
+
+# --- Helper: promote a symlinked directory to a real directory ---
+# Replaces a symlink-to-directory with a real directory whose entries are
+# individual symlinks back to each item in the original upstream. Existing
+# content stays readable and edits to existing files still propagate, while
+# new entries under this path land locally in the target rather than
+# leaking into the upstream.
+promote_symlink() {
+    local path="$1"
+
+    [ -L "$path" ] || return 0
+    [ -d "$path" ] || return 0
+
+    local upstream
+    upstream="$(readlink -f "$path")"
+
+    rm "$path"
+    mkdir "$path"
+
+    shopt -s dotglob nullglob
+    local entry name
+    for entry in "$upstream"/*; do
+        name="$(basename "$entry")"
+        ln -s "$entry" "$path/$name"
+    done
+    shopt -u dotglob nullglob
+
+    printf '%s\t%s\n' "$path" "$upstream" >> "$LOCALIZATION_MARKER"
+    echo "  Localized: ${path#$TARGET_DIR/} (was symlink -> $upstream)"
+}
+
+# --- Helper: ensure a directory path is local to the target ---
+# Walks from $TARGET_DIR down to $1 (recursively), promoting any symlinked
+# directory it finds and creating missing directories as needed. After this
+# returns, every ancestor of $1 (and $1 itself) is a real directory inside
+# $TARGET_DIR — so leaf writes below $1 land locally, without leaking to
+# any symlink target. Idempotent: no-op if everything is already real.
+ensure_local_dir() {
+    local path="$1"
+
+    [ "$path" = "$TARGET_DIR" ] && return 0
+    ensure_local_dir "$(dirname "$path")"
+
+    if [ -L "$path" ] && [ -d "$path" ]; then
+        promote_symlink "$path"
+    elif [ ! -e "$path" ]; then
+        mkdir "$path"
+    fi
+}
+
 # --- Helper: create a symlink pointing to the in-container path ---
 link_file() {
     local rel_path="$1"
@@ -35,7 +89,7 @@ link_file() {
     local dst_dir
     dst_dir="$(dirname "$dst")"
 
-    mkdir -p "$dst_dir"
+    ensure_local_dir "$dst_dir"
 
     if [ -L "$dst" ]; then
         rm "$dst"
@@ -115,6 +169,7 @@ GITIGNORE_ENTRIES=(
     "CLAUDE.local.md"
     ".devcontainer/devcontainer.json.pre-scaffold"
     ".gitignore.pre-scaffold"
+    ".scaffold-localizations"
 )
 for entry in "${GITIGNORE_ENTRIES[@]}"; do
     if [ -f "$TARGET_DIR/.gitignore" ] && grep -qF "$entry" "$TARGET_DIR/.gitignore"; then

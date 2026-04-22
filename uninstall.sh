@@ -42,6 +42,57 @@ unlink_file() {
     fi
 }
 
+# --- Helper: reverse directory localizations recorded by install.sh ---
+# For each promoted symlink recorded in the marker file, attempt to restore
+# the original symlink. Reversal only proceeds when the promoted directory
+# contains nothing but per-item symlinks pointing back to the original
+# upstream — any extras (user additions, leftover scaffold content) leave
+# the localization in place. The directory is still usable either way;
+# a skipped reversal just means the target keeps the per-item mirror shape
+# rather than the single-symlink shape.
+reverse_localizations() {
+    local marker="$TARGET_DIR/.scaffold-localizations"
+    [ -f "$marker" ] || return 0
+
+    echo ""
+    echo "Reversing directory localizations..."
+
+    local path upstream entry name safe
+    # Read deepest-first so inner promotions are unwound before their outer
+    # parents (install appends in outer-first order; tac reverses).
+    while IFS=$'\t' read -r path upstream; do
+        if [ -L "$path" ] || [ ! -d "$path" ]; then
+            echo "  SKIP (not a real dir): ${path#$TARGET_DIR/}"
+            continue
+        fi
+        if [ ! -d "$upstream" ]; then
+            echo "  SKIP (upstream missing): ${path#$TARGET_DIR/}"
+            continue
+        fi
+
+        safe=1
+        shopt -s dotglob nullglob
+        for entry in "$path"/*; do
+            name="$(basename "$entry")"
+            if [ ! -L "$entry" ] || [ "$(readlink "$entry")" != "$upstream/$name" ]; then
+                safe=0
+                break
+            fi
+        done
+        shopt -u dotglob nullglob
+
+        if [ "$safe" -eq 1 ]; then
+            rm -rf "$path"
+            ln -s "$upstream" "$path"
+            echo "  Restored symlink: ${path#$TARGET_DIR/} -> $upstream"
+        else
+            echo "  SKIP (extra content): ${path#$TARGET_DIR/}"
+        fi
+    done < <(tac "$marker")
+
+    rm -f "$marker"
+}
+
 echo "Removing symlinks..."
 
 # scripts
@@ -118,6 +169,9 @@ for dir in \
         echo "  Removed empty directory: ${dir#$TARGET_DIR/}"
     fi
 done
+
+# --- Reverse directory localizations (promoted symlinks) ---
+reverse_localizations
 
 # --- Undo assume-unchanged on restored files ---
 echo ""
